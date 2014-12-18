@@ -24,10 +24,13 @@ class MailAnalytics:
       # 5. before=datetime.date(2013, 12, 20)
       # 6. before=datetime.date(2014, 5, 20),
       # 7. before=datetime.date(2014, 12, 15)
+      
+      # Your email here
+      yourEmail = None
       mails = self.g.all_mail().mail(after=datetime.date(2014, 5, 20),
                          before=datetime.date(2014, 12, 15),
                          prefetch=True,
-                         sender="matteo.campanelli@gmail.com")
+                         sender=yourEmail)
       return mails
       
   def email2dict(self, m):

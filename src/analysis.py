@@ -6,6 +6,7 @@ import re
 import scipy.stats as ss
 
 from textblob import TextBlob, Word
+from langdetect import detect
 
 # contains a list of all emails
 #allMails = None
@@ -67,6 +68,12 @@ class Mails:
     def filterPersonalEmails(self):
         pMails = filter(Mails.isPersonal, self.allMails)
         return filter(lambda m: m['to'].find("Marco") == -1, pMails)
+        
+    def filterWorkEmails(self):
+        engMails = filter(lambda m: detectEmailLanguage(m) == "en",
+                          self.allMails)
+        wkMails = filter(lambda m: not Mails.isPersonal(m), engMails)
+        return wkMails
 
     @staticmethod    
     def isPersonal(m):
@@ -194,3 +201,24 @@ def summary(listofdata):
     for i in range(5):
         print "%s: %d" % (names[i], desc[i])
         
+def mails2TBs(ms):
+    "Convert the emails' bodies into a list of TextBlob-s"
+    bodies = [m['body'].decode("utf-8", "ignore") for m in ms]
+    tbs = [TextBlob(b) for b in bodies]
+    return tbs
+
+# NOTE: length in number of words    
+def getBodyLengths(ms):
+    tbs = mails2TBs(ms)
+    return [len(tb.words) for tb in tbs]
+    
+def detectEmailLanguage(m):
+    b = m['body'].decode("utf-8", "ignore")
+    s = m['subject']
+    try:
+        return detect(b)
+    except:
+        try:
+            return detect(s)
+        except:
+            return "en"

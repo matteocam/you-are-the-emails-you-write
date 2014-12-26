@@ -42,15 +42,37 @@ class FrequencyAnalysis:
 
 class Mails:
     endlineSep = '\r\n'
+    personalRecipients = ["annika", "syyskuura", "kelly", "sofia", "ana",
+                              "konst", "anoop", "floris", "nigel" ]
+    @staticmethod
+    def loadFromFile():
+        f = open('mails_dump', 'r')
+        mails = pickle.load(f)
+        return mails
     def __init__(self, _allMails):
         self.allMails = _allMails
         self.allMails_raw = _allMails
         
         self.cleanupEmails()
         
+        self.pMails = None
+        self.wkMails = None
+        
     
     def getRandomMail(self):
         return random.choice(self.allMails)
+        
+    def classifyEmails(self):
+        "Classifies in personal and work emails"
+        pMails = self.filterPersonalEmails()
+        wkMails = self.filterWorkEmails()
+        
+        computLenghtAndSizeVocab(pMails)
+        computLenghtAndSizeVocab(wkMails)
+        
+        self.pMails = pMails
+        self.wkMails = wkMails
+        return self.pMails, self.wkMails
         
     def cleanupEmails(self):
         " Remove emails with None fields and filter bodies"
@@ -73,17 +95,16 @@ class Mails:
         engMails = filter(lambda m: detectEmailLanguage(m) == "en",
                           self.allMails)
         wkMails = filter(lambda m: not Mails.isPersonal(m), engMails)
+        wkMails = filter(lambda m: 'Call' not in m['labels'] , wkMails)
         return wkMails
 
     @staticmethod    
     def isPersonal(m):
         
         # NOTE: only english recipients for now
-        personalRecipients = ["annika", "kelly", "sofia", "ana",
-                              "konst", "anoop", "floris", "nigel" ]
         recipientLowercase = m['to'].lower()
         found = any([recipientLowercase.find(r) != -1  
-                        for r in personalRecipients])
+                        for r in Mails.personalRecipients])
         
         return found
 
@@ -137,10 +158,15 @@ def personalMailsTB():
     allText = Mails.getAllBodiesFlat(pMails)
     tb = TextBlob(allText)
     return tb
+    
+def gimmeMails():
+    allMails = DataLoading.loadDataFromArchive()
+    mails = Mails(allMails)
+    return mails
 
 # computes English vocabulary
 def computeVocabulary(tb):
-    "return size of vocabulary in an email"
+    "return vocabulary in an email"
     
     wordSet = set([w.lower() for w in tb.words])
     
@@ -193,6 +219,15 @@ def computeWeekdaysFreqBy(ms):
         ms_y = filter(sentInYear(y), ms)
         wdFreqByYear[y] = computeWeekdaysFreq(ms_y)
     return wdFreqByYear
+
+def computLenghtAndSizeVocab(ms):
+    lens = getBodyLengths(ms)
+    # XXX: Kinda too much code duplication around this
+    tbs = mails2TBs(ms)
+    vocabs = [computeVocabulary(tb) for tb in tbs]
+    for i, m in enumerate(ms):
+        m['len'] = lens[i]
+        m['size_vocab'] = len(vocabs[i])
     
 def summary(listofdata):
     desc = ss.describe(listofdata)
@@ -222,3 +257,4 @@ def detectEmailLanguage(m):
             return detect(s)
         except:
             return "en"
+            
